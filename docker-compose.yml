@@ -1,0 +1,20 @@
+services:
+  mealie-mcp:
+    image: ghcr.io/nigelvanHattum/mealie-mcp:latest
+    build: .
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+    # Option A: env file (recommended — create from .env.example)
+    env_file:
+      - path: .env
+        required: false
+    # Option B: config file mount (uncomment and create config.json)
+    volumes:
+      - ${MEALIE_CONFIG_DIR:-~/.config/mealie-mcp}:/config:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
