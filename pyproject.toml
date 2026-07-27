@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "MCP server for the Mealie API — recipe storage from cookbooks, Docker-hosted SSE transport"
 requires-python = ">=3.11"
 dependencies = [
-    "mcp>=1.9.0",
+    "mcp>=1.28.1",
     "httpx>=0.28.1",
     "starlette>=0.40.0",
     "uvicorn[standard]>=0.50.2",
