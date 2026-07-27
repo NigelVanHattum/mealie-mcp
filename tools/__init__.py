@@ -3,6 +3,7 @@
 from . import (
     app,
     recipes,
+    images,
     organizers,
     foods,
     units,
@@ -11,6 +12,7 @@ from . import (
 _MODULES = [
     app,
     recipes,
+    images,
     organizers,
     foods,
     units,

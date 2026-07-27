@@ -106,6 +106,56 @@ class TestApi:
 
 
 # ---------------------------------------------------------------------------
+# exists() — media-file probe, must never raise
+# ---------------------------------------------------------------------------
+
+class TestExists:
+    def _probe(self, statuses):
+        """Patch the client so each request returns the next status in turn."""
+        responses = []
+        for st in statuses:
+            r = _mock_response(status=st)
+            r.is_success = 200 <= st < 300
+            responses.append(r)
+        mk = patch("client._make_client")
+        return mk, responses
+
+    def test_true_on_200(self):
+        mk, responses = self._probe([200])
+        with mk as m:
+            m.return_value.__enter__.return_value.request.side_effect = responses
+            assert client.exists("/api/media/recipes/r1/images/original.webp") is True
+
+    def test_false_on_404(self):
+        mk, responses = self._probe([404])
+        with mk as m:
+            m.return_value.__enter__.return_value.request.side_effect = responses
+            assert client.exists("/api/media/recipes/r1/images/original.webp") is False
+
+    def test_uses_ranged_get_not_head(self):
+        """Mealie's media proxy 404s on HEAD even when the file exists."""
+        mk, responses = self._probe([206])
+        with mk as m:
+            req = m.return_value.__enter__.return_value.request
+            req.side_effect = responses
+            assert client.exists("/x") is True
+        assert req.call_args.args[0] == "GET"
+        assert req.call_args.kwargs["headers"] == {"Range": "bytes=0-0"}
+
+    def test_inconclusive_status_is_unknown_not_missing(self):
+        for status in (401, 403, 500):
+            mk, responses = self._probe([status])
+            with mk as m:
+                m.return_value.__enter__.return_value.request.side_effect = responses
+                assert client.exists("/x") is None, status
+
+    def test_none_when_check_cannot_be_made(self):
+        """A network/config failure is 'unknown', never a false negative."""
+        with patch("client._make_client", side_effect=RuntimeError("no base url")):
+            assert client.exists("/x") is None
+
+
+# ---------------------------------------------------------------------------
 # Auth — API key only
 # ---------------------------------------------------------------------------
 

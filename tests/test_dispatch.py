@@ -196,6 +196,168 @@ class TestTransforms:
 
 
 # ---------------------------------------------------------------------------
+# Recipe images
+# ---------------------------------------------------------------------------
+
+import base64
+
+import pytest
+
+from tools import images
+
+# 1x1 PNG / JPEG / WebP headers, enough for magic-byte detection.
+PNG_BYTES = (b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
+JPG_BYTES = (b"\xff\xd8\xff\xe0" + b"\x00" * 16)
+WEBP_BYTES = (b"RIFF" + b"\x00\x00\x00\x00" + b"WEBP" + b"\x00" * 16)
+
+RECIPE = {"id": "r-123", "slug": "pannenkoek", "image": "AbCdEf"}
+
+
+def b64(blob: bytes) -> str:
+    return base64.b64encode(blob).decode()
+
+
+def stored(value=True):
+    """Patch the media-file existence probe: True/False/None (check failed)."""
+    return patch.object(images.client, "exists", MagicMock(return_value=value))
+
+
+def thumbs(*blobs):
+    """Patch the thumbnail read, one blob per call (used for change detection)."""
+    return patch.object(images.client, "fetch", MagicMock(side_effect=list(blobs)))
+
+
+class TestImageFromUrl:
+    def test_posts_url_then_rereads_recipe(self):
+        # GET (pre-state), POST (set), GET (verify)
+        m = MagicMock(side_effect=[RECIPE, None, RECIPE])
+        with stored(), thumbs(b"old", b"new"), \
+             patch.object(images.client, "MEALIE_BASE_URL", "https://m.example.com"):
+            out = run(images, "set_recipe_image_from_url",
+                      {"slug": "pannenkoek", "url": "https://x.test/a.jpg"}, m)
+        assert m.call_args_list[1] == (
+            ("POST", "/api/recipes/pannenkoek/image"),
+            {"body": {"url": "https://x.test/a.jpg"}},
+        )
+        assert m.call_args_list[2] == (("GET", "/api/recipes/pannenkoek"), {})
+        assert out["imageChanged"] is True
+        assert "warning" not in out
+        assert out["recipeId"] == "r-123"
+        assert out["imageVersion"] == "AbCdEf"
+        assert out["hasImage"] is True
+        assert out["imageUrls"]["original"] == \
+            "https://m.example.com/api/media/recipes/r-123/images/original.webp"
+        assert out["imageUrls"]["min"].endswith("/min-original.webp")
+        assert out["imageUrls"]["tiny"].endswith("/tiny-original.webp")
+
+    def test_strips_whitespace_around_url(self):
+        m = MagicMock(side_effect=[RECIPE, None, RECIPE])
+        with stored(), thumbs(b"old", b"new"):
+            run(images, "set_recipe_image_from_url",
+                {"slug": "pannenkoek", "url": "  https://x.test/a.jpg  "}, m)
+        assert m.call_args_list[1].kwargs["body"] == {"url": "https://x.test/a.jpg"}
+
+    def test_empty_url_rejected_before_request(self):
+        m = MagicMock()
+        with pytest.raises(ValueError, match="url is required"):
+            run(images, "set_recipe_image_from_url", {"slug": "x", "url": "   "}, m)
+        m.assert_not_called()
+
+    def test_silent_mealie_failure_is_reported_not_hidden(self):
+        """Mealie bumps the version key even when its download failed — a 2xx
+        response with no stored file must raise, not report a false success."""
+        m = MagicMock(side_effect=[RECIPE, None, RECIPE])
+        with stored(False), thumbs(None, None), \
+             pytest.raises(RuntimeError, match="stored no image"):
+            run(images, "set_recipe_image_from_url",
+                {"slug": "pannenkoek", "url": "http://192.168.1.9/a.jpg"}, m)
+
+    def test_unchanged_image_is_flagged_when_an_older_one_remains(self):
+        """A failed download over a recipe that already had an image leaves the
+        old file in place — 'a file exists' is not proof the new one landed."""
+        m = MagicMock(side_effect=[RECIPE, None, RECIPE])
+        with stored(), thumbs(b"same", b"same"):
+            out = run(images, "set_recipe_image_from_url",
+                      {"slug": "pannenkoek", "url": "http://192.168.1.9/a.jpg"}, m)
+        assert out["imageChanged"] is False
+        assert "byte-identical" in out["warning"]
+
+    def test_falls_back_to_version_key_when_probe_unavailable(self):
+        m = MagicMock(side_effect=[RECIPE, None, RECIPE])
+        with stored(None), thumbs(None, None):
+            out = run(images, "set_recipe_image_from_url",
+                      {"slug": "pannenkoek", "url": "https://x.test/a.jpg"}, m)
+        assert out["hasImage"] is True
+        assert "imageUrls" in out
+
+
+class TestImageUpload:
+    def test_puts_multipart_with_sniffed_extension(self):
+        m = MagicMock(side_effect=[{"image": "NewVer"}, RECIPE])
+        with stored():
+            run(images, "upload_recipe_image",
+                {"slug": "pannenkoek", "imageBase64": b64(PNG_BYTES)}, m)
+        args, kwargs = m.call_args_list[0]
+        assert args == ("PUT", "/api/recipes/pannenkoek/image")
+        assert kwargs["body"] == {"extension": "png"}
+        name, blob, mime = kwargs["files"]["image"]
+        assert (name, blob, mime) == ("image.png", PNG_BYTES, "image/png")
+
+    def test_sniffs_jpeg_and_webp(self):
+        for blob, ext, mime in [(JPG_BYTES, "jpg", "image/jpeg"),
+                                (WEBP_BYTES, "webp", "image/webp")]:
+            m = MagicMock(side_effect=[{"image": "v"}, RECIPE])
+            with stored():
+                run(images, "upload_recipe_image", {"slug": "s", "imageBase64": b64(blob)}, m)
+            kwargs = m.call_args_list[0].kwargs
+            assert kwargs["body"] == {"extension": ext}
+            assert kwargs["files"]["image"][2] == mime
+
+    def test_explicit_extension_wins_and_is_normalised(self):
+        m = MagicMock(side_effect=[{"image": "v"}, RECIPE])
+        with stored():
+            run(images, "upload_recipe_image",
+                {"slug": "s", "imageBase64": b64(PNG_BYTES), "extension": ".JPG"}, m)
+        assert m.call_args_list[0].kwargs["body"] == {"extension": "jpg"}
+
+    def test_accepts_data_uri(self):
+        m = MagicMock(side_effect=[{"image": "v"}, RECIPE])
+        with stored():
+            run(images, "upload_recipe_image",
+                {"slug": "s", "imageBase64": f"data:image/png;base64,{b64(PNG_BYTES)}"}, m)
+        assert m.call_args_list[0].kwargs["files"]["image"][1] == PNG_BYTES
+
+    def test_unknown_format_without_extension_raises(self):
+        m = MagicMock()
+        with pytest.raises(ValueError, match="Could not identify the image format"):
+            run(images, "upload_recipe_image",
+                {"slug": "s", "imageBase64": b64(b"not-an-image-at-all")}, m)
+        m.assert_not_called()
+
+    def test_empty_payload_raises(self):
+        m = MagicMock()
+        with pytest.raises(ValueError, match="empty"):
+            run(images, "upload_recipe_image", {"slug": "s", "imageBase64": "  "}, m)
+        m.assert_not_called()
+
+    def test_zero_byte_payload_raises(self):
+        m = MagicMock()
+        with pytest.raises(ValueError, match="zero bytes"):
+            run(images, "upload_recipe_image", {"slug": "s", "imageBase64": "===="}, m)
+        m.assert_not_called()
+
+
+class TestImageDelete:
+    def test_deletes_then_reports_no_image(self):
+        m = MagicMock(side_effect=[{"status": "success"}, {**RECIPE, "image": None}])
+        with stored(False):
+            out = run(images, "delete_recipe_image", {"slug": "pannenkoek"}, m)
+        assert m.call_args_list[0] == (("DELETE", "/api/recipes/pannenkoek/image"), {})
+        assert out["hasImage"] is False
+        assert "imageUrls" not in out
+
+
+# ---------------------------------------------------------------------------
 # Organizers
 # ---------------------------------------------------------------------------
 

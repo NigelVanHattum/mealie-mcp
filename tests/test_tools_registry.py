@@ -4,7 +4,7 @@ import pytest
 from collections import Counter
 
 import tools
-from tools import app, recipes, organizers, foods, units
+from tools import app, recipes, images, organizers, foods, units
 
 
 # ---------------------------------------------------------------------------
@@ -13,7 +13,7 @@ from tools import app, recipes, organizers, foods, units
 
 class TestRegistry:
     def test_total_tool_count(self):
-        assert len(tools.ALL_TOOLS) == 18
+        assert len(tools.ALL_TOOLS) == 21
 
     def test_no_duplicate_names(self):
         names = [t.name for t in tools.ALL_TOOLS]
@@ -32,7 +32,7 @@ class TestRegistry:
                 f"Tool {t.name} has a weak description"
 
     def test_tool_names_sets_match_tools(self):
-        for mod in [app, recipes, organizers, foods, units]:
+        for mod in [app, recipes, images, organizers, foods, units]:
             declared = {t.name for t in mod.TOOLS}
             assert mod.TOOL_NAMES == declared, f"{mod.__name__}: TOOL_NAMES mismatch"
 
@@ -58,6 +58,7 @@ class TestRegistry:
             "get_server_info", "get_current_user",
             "list_recipes", "get_recipe", "create_recipe", "update_recipe",
             "overwrite_recipe", "delete_recipe",
+            "set_recipe_image_from_url", "upload_recipe_image", "delete_recipe_image",
             "list_categories", "create_category", "list_tags", "create_tag",
             "list_tools", "create_tool",
             "list_foods", "create_food", "list_units", "create_unit",
@@ -72,6 +73,7 @@ class TestRegistry:
 class TestModuleCounts:
     def test_app(self):        assert len(app.TOOLS) == 2
     def test_recipes(self):    assert len(recipes.TOOLS) == 6
+    def test_images(self):     assert len(images.TOOLS) == 3
     def test_organizers(self): assert len(organizers.TOOLS) == 6
     def test_foods(self):      assert len(foods.TOOLS) == 2
     def test_units(self):      assert len(units.TOOLS) == 2
@@ -90,9 +92,16 @@ class TestAnnotations:
             assert self._byname(n).annotations.readOnlyHint is True
 
     def test_delete_is_destructive(self):
-        ann = self._byname("delete_recipe").annotations
-        assert ann.destructiveHint is True
-        assert ann.readOnlyHint is False
+        for n in ["delete_recipe", "delete_recipe_image"]:
+            ann = self._byname(n).annotations
+            assert ann.destructiveHint is True, n
+            assert ann.readOnlyHint is False, n
+
+    def test_image_writes_are_not_destructive(self):
+        for n in ["set_recipe_image_from_url", "upload_recipe_image"]:
+            ann = self._byname(n).annotations
+            assert ann.destructiveHint is False, n
+            assert ann.idempotentHint is True, n
 
     def test_overwrite_is_destructive_update_is_not(self):
         assert self._byname("overwrite_recipe").annotations.destructiveHint is True

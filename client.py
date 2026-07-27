@@ -103,6 +103,43 @@ def api(
             return r.text
 
 
+def exists(path: str) -> bool | None:
+    """Return whether `path` serves content, without raising on a 404.
+
+    True or False on a definite answer; None when the check could not be made
+    (network failure, or any status that says nothing about the file, such as
+    401/403). Callers must not read None as "missing".
+
+    Uses a ranged GET rather than HEAD: Mealie's media files are served by the
+    proxy in front of the app, which answers HEAD with a 404 even when the file
+    is there. The Range header keeps the transfer to a single byte where the
+    proxy honours it, and costs nothing where it doesn't.
+    """
+    try:
+        with _make_client() as client:
+            r = client.request("GET", path, headers={"Range": "bytes=0-0"})
+            if r.is_success:
+                return True
+            if r.status_code == 404:
+                return False
+            return None
+    except Exception:
+        return None
+
+
+def fetch(path: str) -> bytes | None:
+    """Return the bytes served at `path`, or None if it could not be fetched.
+
+    Never raises — used for cheap verification reads, not for API calls.
+    """
+    try:
+        with _make_client() as client:
+            r = client.request("GET", path)
+            return r.content if r.is_success else None
+    except Exception:
+        return None
+
+
 def omit(d: dict, *keys: str) -> dict:
     """Return dict without the specified keys and without None values."""
     return {k: v for k, v in d.items() if k not in keys and v is not None}
