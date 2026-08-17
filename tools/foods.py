@@ -18,8 +18,8 @@ import mcp.types as types
 
 from client import api, omit
 
-_RO = types.ToolAnnotations(readOnlyHint=True, openWorldHint=True)
-_WRITE = types.ToolAnnotations(readOnlyHint=False, idempotentHint=True, openWorldHint=True)
+_RO = types.ToolAnnotations(read_only_hint=True, open_world_hint=True)
+_WRITE = types.ToolAnnotations(read_only_hint=False, idempotent_hint=True, open_world_hint=True)
 
 TOOLS = [
     types.Tool(
@@ -27,7 +27,7 @@ TOOLS = [
         description="List ingredient foods (paginated). Use to check whether a "
                     "food already exists before creating it.",
         annotations=_RO,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "search":  {"type": "string", "description": "Case-insensitive name filter."},
@@ -40,7 +40,7 @@ TOOLS = [
         name="create_food",
         description="Create an ingredient food. Returns the created food with its id.",
         annotations=_WRITE,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "name":        {"type": "string", "description": "Food name, e.g. 'flour'."},

@@ -12,7 +12,7 @@ import mcp.types as types
 
 from client import api
 
-_RO = types.ToolAnnotations(readOnlyHint=True, openWorldHint=True)
+_RO = types.ToolAnnotations(read_only_hint=True, open_world_hint=True)
 
 TOOLS = [
     types.Tool(
@@ -20,14 +20,14 @@ TOOLS = [
         description="Get Mealie server info (version, production flag). Use as a "
                     "connectivity check.",
         annotations=_RO,
-        inputSchema={"type": "object", "properties": {}},
+        input_schema={"type": "object", "properties": {}},
     ),
     types.Tool(
         name="get_current_user",
         description="Get the authenticated Mealie user. Use to verify the API token "
                     "is valid and to discover the active group/household.",
         annotations=_RO,
-        inputSchema={"type": "object", "properties": {}},
+        input_schema={"type": "object", "properties": {}},
     ),
 ]
 

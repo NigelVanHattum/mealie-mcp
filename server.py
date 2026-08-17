@@ -21,11 +21,11 @@ import os
 import httpx
 import mcp.types as types
 import uvicorn
-from mcp.server import Server
+from mcp.server import Server, ServerRequestContext
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 from starlette.routing import Mount, Route
 
 import tools
@@ -34,27 +34,40 @@ import tools
 # MCP server
 # ---------------------------------------------------------------------------
 
-mcp_server = Server("mealie")
+async def list_tools(
+    ctx: ServerRequestContext,
+    params: types.PaginatedRequestParams | None,
+) -> types.ListToolsResult:
+    return types.ListToolsResult(tools=tools.ALL_TOOLS)
 
 
-@mcp_server.list_tools()
-async def list_tools() -> list[types.Tool]:
-    return tools.ALL_TOOLS
-
-
-@mcp_server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
+async def call_tool(
+    ctx: ServerRequestContext,
+    params: types.CallToolRequestParams,
+) -> types.CallToolResult:
     try:
-        result = tools.dispatch(name, arguments)
-        return [types.TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
+        result = tools.dispatch(params.name, params.arguments or {})
+        text = json.dumps(result, indent=2, default=str)
+        is_error = False
     except httpx.HTTPStatusError as e:
         # Surface the Mealie status code + body so the agent can self-correct.
-        return [types.TextContent(
-            type="text",
-            text=f"HTTP {e.response.status_code} from Mealie: {e.response.text}",
-        )]
+        text = f"HTTP {e.response.status_code} from Mealie: {e.response.text}"
+        is_error = True
     except Exception as e:
-        return [types.TextContent(type="text", text=f"Error: {e}")]
+        text = f"Error: {e}"
+        is_error = True
+    return types.CallToolResult(
+        content=[types.TextContent(type="text", text=text)],
+        isError=is_error,
+    )
+
+
+mcp_server = Server(
+    "mealie",
+    version="1.0.0",
+    on_list_tools=list_tools,
+    on_call_tool=call_tool,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +85,8 @@ async def handle_sse(request: Request):
             streams[0], streams[1],
             mcp_server.create_initialization_options(),
         )
+    # SSE response is already sent by connect_sse; Starlette still wants a Response.
+    return Response()
 
 
 async def health(request: Request):
