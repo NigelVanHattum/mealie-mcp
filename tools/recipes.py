@@ -62,14 +62,14 @@ _CONTENT_PROPS = {
                                     "\"page\": \"42\"}."},
 }
 
-_RO = types.ToolAnnotations(readOnlyHint=True, openWorldHint=True)
-_CREATE = types.ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
-_UPDATE = types.ToolAnnotations(readOnlyHint=False, destructiveHint=False,
-                                idempotentHint=True, openWorldHint=True)
-_OVERWRITE = types.ToolAnnotations(readOnlyHint=False, destructiveHint=True,
-                                   idempotentHint=True, openWorldHint=True)
-_DELETE = types.ToolAnnotations(readOnlyHint=False, destructiveHint=True,
-                                idempotentHint=True, openWorldHint=True)
+_RO = types.ToolAnnotations(read_only_hint=True, open_world_hint=True)
+_CREATE = types.ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=True)
+_UPDATE = types.ToolAnnotations(read_only_hint=False, destructive_hint=False,
+                                idempotent_hint=True, open_world_hint=True)
+_OVERWRITE = types.ToolAnnotations(read_only_hint=False, destructive_hint=True,
+                                   idempotent_hint=True, open_world_hint=True)
+_DELETE = types.ToolAnnotations(read_only_hint=False, destructive_hint=True,
+                                idempotent_hint=True, open_world_hint=True)
 
 TOOLS = [
     types.Tool(
@@ -77,7 +77,7 @@ TOOLS = [
         description="List or search recipes (paginated summaries). Use to verify a "
                     "recipe was stored, or to check for duplicates before creating one.",
         annotations=_RO,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "search":     {"type": "string", "description": "Full-text search across recipes."},
@@ -98,7 +98,7 @@ TOOLS = [
         description="Get a single recipe in full by its slug, including ingredients "
                     "and instructions. Use to verify stored content.",
         annotations=_RO,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {"slug": {"type": "string", "description": "Recipe slug."}},
             "required": ["slug"],
@@ -112,7 +112,7 @@ TOOLS = [
                     "extracted from a cookbook; translate fields to the target "
                     "language before calling.",
         annotations=_CREATE,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "name": {"type": "string", "description": "Recipe title (must be unique-ish; "
@@ -128,7 +128,7 @@ TOOLS = [
                     "are changed; everything else is preserved. Use to correct or "
                     "enrich a recipe after verifying it.",
         annotations=_UPDATE,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "slug": {"type": "string", "description": "Slug of the recipe to update."},
@@ -148,7 +148,7 @@ TOOLS = [
                     "kept. Use to fully re-import a recipe from scratch; use "
                     "update_recipe instead to change only some fields.",
         annotations=_OVERWRITE,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "slug": {"type": "string", "description": "Slug of the recipe to overwrite."},
@@ -162,7 +162,7 @@ TOOLS = [
         name="delete_recipe",
         description="Delete a recipe by slug. Destructive and not reversible.",
         annotations=_DELETE,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {"slug": {"type": "string", "description": "Slug of the recipe to delete."}},
             "required": ["slug"],

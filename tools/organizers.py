@@ -21,8 +21,8 @@ import mcp.types as types
 
 from client import api
 
-_RO = types.ToolAnnotations(readOnlyHint=True, openWorldHint=True)
-_WRITE = types.ToolAnnotations(readOnlyHint=False, idempotentHint=True, openWorldHint=True)
+_RO = types.ToolAnnotations(read_only_hint=True, open_world_hint=True)
+_WRITE = types.ToolAnnotations(read_only_hint=False, idempotent_hint=True, open_world_hint=True)
 
 _PAGE_PROPS = {
     "search":  {"type": "string", "description": "Case-insensitive name filter."},
@@ -39,7 +39,7 @@ def _make_list_tools() -> list[types.Tool]:
             description=f"List recipe {kind} (paginated). Use to verify which "
                         f"{kind} already exist before creating or assigning them.",
             annotations=_RO,
-            inputSchema={"type": "object", "properties": dict(_PAGE_PROPS)},
+            input_schema={"type": "object", "properties": dict(_PAGE_PROPS)},
         ))
     return out
 
@@ -53,7 +53,7 @@ def _make_create_tools() -> list[types.Tool]:
                         f"{sing} with its id and slug. No-op friendly: if a {sing} "
                         f"with the same name exists, prefer assigning it instead.",
             annotations=_WRITE,
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {"name": {"type": "string", "description": f"{sing.capitalize()} name."}},
                 "required": ["name"],

@@ -36,10 +36,10 @@ import mcp.types as types
 import client
 from client import api
 
-_UPDATE = types.ToolAnnotations(readOnlyHint=False, destructiveHint=False,
-                                idempotentHint=True, openWorldHint=True)
-_DELETE = types.ToolAnnotations(readOnlyHint=False, destructiveHint=True,
-                                idempotentHint=True, openWorldHint=True)
+_UPDATE = types.ToolAnnotations(read_only_hint=False, destructive_hint=False,
+                                idempotent_hint=True, open_world_hint=True)
+_DELETE = types.ToolAnnotations(read_only_hint=False, destructive_hint=True,
+                                idempotent_hint=True, open_world_hint=True)
 
 TOOLS = [
     types.Tool(
@@ -51,7 +51,7 @@ TOOLS = [
                     "Replaces any existing image. Use upload_recipe_image instead "
                     "when you hold the image bytes (e.g. extracted from a cookbook PDF).",
         annotations=_UPDATE,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "slug": {"type": "string", "description": "Slug of the recipe to set the image on."},
@@ -72,7 +72,7 @@ TOOLS = [
                     "(jpg, png, webp, gif, bmp, heic, avif). Keep uploads modest — a "
                     "few MB at most; base64 inflates size by ~33%.",
         annotations=_UPDATE,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "slug": {"type": "string", "description": "Slug of the recipe to set the image on."},
@@ -93,7 +93,7 @@ TOOLS = [
                     "image is deleted. Not reversible — the image must be re-uploaded "
                     "to restore it.",
         annotations=_DELETE,
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {"slug": {"type": "string",
                                     "description": "Slug of the recipe to remove the image from."}},

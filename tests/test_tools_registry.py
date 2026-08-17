@@ -23,8 +23,8 @@ class TestRegistry:
     def test_all_tools_have_name_and_schema(self):
         for t in tools.ALL_TOOLS:
             assert t.name, "Tool missing name"
-            assert t.inputSchema, f"Tool {t.name} missing inputSchema"
-            assert t.inputSchema.get("type") == "object"
+            assert t.input_schema, f"Tool {t.name} missing input_schema"
+            assert t.input_schema.get("type") == "object"
 
     def test_all_tools_have_description(self):
         for t in tools.ALL_TOOLS:
@@ -42,7 +42,7 @@ class TestRegistry:
 
     @pytest.mark.parametrize("tool", tools.ALL_TOOLS)
     def test_required_fields_are_in_properties(self, tool):
-        schema = tool.inputSchema
+        schema = tool.input_schema
         required = schema.get("required", [])
         props = schema.get("properties", {})
         missing = [f for f in required if f not in props]
@@ -89,20 +89,20 @@ class TestAnnotations:
 
     def test_read_tools_are_readonly(self):
         for n in ["list_recipes", "get_recipe", "get_server_info", "get_current_user"]:
-            assert self._byname(n).annotations.readOnlyHint is True
+            assert self._byname(n).annotations.read_only_hint is True
 
     def test_delete_is_destructive(self):
         for n in ["delete_recipe", "delete_recipe_image"]:
             ann = self._byname(n).annotations
-            assert ann.destructiveHint is True, n
-            assert ann.readOnlyHint is False, n
+            assert ann.destructive_hint is True, n
+            assert ann.read_only_hint is False, n
 
     def test_image_writes_are_not_destructive(self):
         for n in ["set_recipe_image_from_url", "upload_recipe_image"]:
             ann = self._byname(n).annotations
-            assert ann.destructiveHint is False, n
-            assert ann.idempotentHint is True, n
+            assert ann.destructive_hint is False, n
+            assert ann.idempotent_hint is True, n
 
     def test_overwrite_is_destructive_update_is_not(self):
-        assert self._byname("overwrite_recipe").annotations.destructiveHint is True
-        assert self._byname("update_recipe").annotations.destructiveHint is False
+        assert self._byname("overwrite_recipe").annotations.destructive_hint is True
+        assert self._byname("update_recipe").annotations.destructive_hint is False
