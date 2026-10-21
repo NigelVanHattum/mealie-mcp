@@ -1,7 +1,7 @@
 [project]
 name = "mealie-mcp"
-version = "1.0.0"
-description = "MCP server for the Mealie API — recipe storage from cookbooks, Docker-hosted SSE transport"
+version = "1.1.0"
+description = "MCP server for the Mealie API — recipe storage from cookbooks, Docker-hosted, stateless Streamable HTTP and SSE"
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=2.3.0,<3",
