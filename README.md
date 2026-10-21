@@ -4,8 +4,15 @@ Docker-hosted MCP server for [Mealie](https://mealie.io). It gives an AI agent
 the tools to **read a cookbook (e.g. a PDF), extract the recipes (translating
 them if needed) and store them in Mealie** — then verify its own work.
 
-Built against **Mealie API v3.28.0**. Transport: **SSE**
-(`http://localhost:8001/sse`) — persistent container, no subprocess spawning.
+Built against **Mealie API v3.28.0**.
+
+Transports — persistent container, no subprocess spawning:
+
+- **Streamable HTTP** (`http://localhost:8001/mcp`), stateless. No `initialize`
+  handshake and no `Mcp-Session-Id`, so clients that do not negotiate a session
+  can call it directly. Use this one unless your client needs SSE; Obot v0.27.0+
+  requires it.
+- **SSE** (`http://localhost:8001/sse`), the legacy transport, still served.
 
 It deliberately covers only the endpoints that serve the cookbook → Mealie
 workflow (recipes, recipe images, organizers, foods, units) plus read endpoints
@@ -59,7 +66,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "mealie": {
-      "url": "http://localhost:8001/sse"
+      "url": "http://localhost:8001/mcp"
     }
   }
 }
@@ -71,7 +78,7 @@ Restart Claude Desktop, then try: _"Check my Mealie connection"_ → it calls
 ### Claude Code
 
 ```bash
-claude mcp add mealie --url http://localhost:8001/sse
+claude mcp add mealie --url http://localhost:8001/mcp
 ```
 
 ## Configuration
@@ -95,7 +102,7 @@ username/password path.
 
 ## Exposure & security
 
-The MCP API itself is **unauthenticated**: `/sse`, `/messages/` and `/health`
+The MCP API itself is **unauthenticated**: `/mcp`, `/sse`, `/messages/` and `/health`
 have no inbound auth. Anyone who can reach the port can call every tool —
 including `create_recipe`, `overwrite_recipe` and `delete_recipe` — using the
 server's Mealie API key.
@@ -103,8 +110,7 @@ server's Mealie API key.
 So treat the server as a private backend: let **Obot** (or your MCP host)
 connect to it over localhost or a private/Docker network, and do **not** expose
 the port to the public internet. If it must traverse an untrusted network, put a
-reverse proxy with authentication in front of it. Transport is SSE; Streamable
-HTTP can be added if your host prefers it.
+reverse proxy with authentication in front of it.
 
 ## Recommended agent workflow
 
