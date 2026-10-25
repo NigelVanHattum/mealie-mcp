@@ -1,12 +1,12 @@
 # Stage 1: test — run full suite; build fails if tests fail
-FROM python:3.15.1-slim AS test
+FROM python:3.16.0a1-slim AS test
 WORKDIR /app
 COPY . .
 RUN pip install --no-cache-dir ".[dev]"
 RUN pytest
 
 # Stage 2: runtime — production image, no test deps
-FROM python:3.15.1-slim AS runtime
+FROM python:3.16.0a1-slim AS runtime
 WORKDIR /app
 
 # Install only production deps from pyproject.toml [project.dependencies]
