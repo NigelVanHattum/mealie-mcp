@@ -22,6 +22,11 @@ updates:
     # Check for updates once a week
     schedule:
       interval: "weekly"
+    # Only stable Python releases: skip 3.16 pre-releases (alpha/beta/rc).
+    # Bump this range when the next minor enters pre-release.
+    ignore:
+      - dependency-name: "python"
+        versions: [">= 3.16.0a0, < 3.16.0"]
 
   # Workflows pin every `uses:` to a commit SHA, so a moved or vulnerable action
   # version can only reach CI through a PR here. Without this block the pins
