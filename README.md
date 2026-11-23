@@ -4,7 +4,7 @@ Docker-hosted MCP server for [Mealie](https://mealie.io). It gives an AI agent
 the tools to **read a cookbook (e.g. a PDF), extract the recipes (translating
 them if needed) and store them in Mealie** — then verify its own work.
 
-Built against **Mealie API v3.30.0**.
+Built against **Mealie API v3.31.0**.
 
 Transports — persistent container, no subprocess spawning:
 
